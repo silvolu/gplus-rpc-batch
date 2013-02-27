@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>RPC Batch: profile + email</title>
+    <style type="text/css">
+    .hide { display: none;}
+    .show { display: block;}
+    </style>
+  </head>
+
+  <body>
+    <div id="signin-button" class="show">
+      <div class="g-signin"
+          data-callback="signinCallback"
+          data-approvalprompt="force"
+          data-clientid="YOUR_CLIENT_ID"
+          data-scope="https://www.googleapis.com/auth/plus.login
+            https://www.googleapis.com/auth/userinfo.email"
+          data-cookiepolicy="single_host_origin">
+      </div>
+    </div>
+    
+    <div id="profile"></div>
+    <div id="email"></div>
+    
+    <script>
+      function init() {
+        gapi.client.load('plus', 'v1');
+        gapi.signin.go();
+      }
+
+      /*
+       * Triggered when the accepts the the sign in, cancels, or closes the
+       * authorization dialog.
+       */
+      function signinCallback(authResult) {
+        if (authResult) {
+          // Hide the sign in upon successful sign in.
+          if(authResult['access_token']) {
+            toggleElement('signin-button');
+            gapi.client.load('oauth2', 'v1', getProfileInfo);                     
+          }
+          else {
+            console.log(authResult['error']);
+          }
+        }
+      }
+      
+      /*
+       * Register and sends requests to the batch
+       * https://code.google.com/p/google-api-javascript-client/wiki/RpcBatch
+       */
+      function getProfileInfo(){
+        var rpcBatch = gapi.client.newRpcBatch();
+        var getProfile = gapi.client.plus.people.get({'userId': 'me'});
+        var getEmail = gapi.client.oauth2.userinfo.get();
+        rpcBatch.add(getProfile, { 'id': 'getProfile' });
+        rpcBatch.add(getEmail, { 'id': 'getEmail' });
+        rpcBatch.execute(getProfileCallback);
+      }
+      
+      /*
+       * Call back for Batch, executed when all the requests in the batch
+       * have completed.
+       */
+      function getProfileCallback(jsonResponse){
+        var profile = document.getElementById('profile');
+        var email = document.getElementById('email');
+
+        for (var id in jsonResponse) {
+          if (id == 'getProfile') {
+            var userProfile = jsonResponse[id].result;
+            profile.innerHTML = userProfile.displayName;
+          };
+
+          if (id == 'getEmail') {
+            jsonResponse[id].result;
+            email.innerHTML = jsonResponse[id].result.email;
+          }
+        }
+      }
+      
+      function toggleElement(id) {
+        var el = document.getElementById(id);
+        if (el.getAttribute('class') == 'hide') {
+          el.setAttribute('class', 'show');
+        } else {
+          el.setAttribute('class', 'hide');
+        }
+      }
+    </script>
+    <script src="https://apis.google.com/js/client:plusone.js?onload=init">
+      {"parsetags": "explicit"}
+    </script>
+  </body>
+</html>
